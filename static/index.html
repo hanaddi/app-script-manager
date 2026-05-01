@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- <script src="https://accounts.google.com/gsi/client" async defer></script> -->
+    <script src="https://accounts.google.com/gsi/client" onload="initClient()" async defer></script>
+</head>
+
+<body>
+    <script>
+        let client;
+        let access_token;
+        const CLIENT_ID = '920247258155-u93hr5ec3i7dq134j9uvrikb00hlfkhq.apps.googleusercontent.com';
+        const scope = [
+            "https://www.googleapis.com/auth/script.projects",
+            "https://www.googleapis.com/auth/script.deployments",
+            "https://www.googleapis.com/auth/script.external_request",
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/userinfo.email",
+        ];
+
+        function initClient() {
+            // client = google.accounts.oauth2.initTokenClient({
+            //     client_id: '920247258155-u93hr5ec3i7dq134j9uvrikb00hlfkhq.apps.googleusercontent.com',
+            //     scope: 'https://www.googleapis.com/auth/calendar.readonly \
+            //       https://www.googleapis.com/auth/contacts.readonly',
+            //     callback: (tokenResponse) => {
+            //         access_token = tokenResponse.access_token;
+            //     },
+            // });
+
+
+            // 2. Initialize the client with your specific parameters
+            client = google.accounts.oauth2.initCodeClient({
+                client_id: CLIENT_ID,
+                // scope: 'openid profile email',
+                scope: scope.join(" "),
+                ux_mode: 'popup',
+                access_type: 'offline',
+                // state: '10111384-c309-474d-ba8f-1380772965e7', // Your unique state
+                select_account: true, // Replaces prompt=consent behavior
+                callback: (response) => {
+                    console.log(response);
+                    if (response.code) {
+                        fetch("/auth/google", {
+                            "headers": {
+                                "Content-Type": "application/json",
+                            },
+                            "body": JSON.stringify({ code: response.code }),
+                            "method": "POST",
+                        })
+                        .then(res => res.json())
+                        .then(res => console.log(res))
+                        // 3. Handle the code. Instead of a redirect, 
+                        // you manually send this to your backend endpoint.
+                        // fetch("https://edbot.ai" + response.code + "&state=" + response.state)
+                        //     .then(res => window.location.href = res.url); // Or handle login logic
+                    }
+                },
+            });
+        }
+
+        function getToken() {
+            client.requestAccessToken();
+        }
+        function revokeToken() {
+            google.accounts.oauth2.revoke(access_token, () => { console.log('access token revoked') });
+        }
+        function loadCalendar() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', 'https://www.googleapis.com/calendar/v3/calendars/primary/events');
+            xhr.setRequestHeader('Authorization', 'Bearer ' + access_token);
+            xhr.send();
+        }
+
+        function handleAuthClick() {
+            // Trigger the popup
+            client.requestCode();
+        }
+        // window.onload = initClient;
+    </script>
+    <h1>Google Identity Services Authorization Token model</h1>
+    <!-- <button onclick="getToken();">Get access token</button><br><br> -->
+    <button onclick="loadCalendar();">Load Calendar</button><br><br>
+    <button onclick="revokeToken();">Revoke token</button>
+
+    <button onclick="handleAuthClick()">Sign in with Google</button>
+</body>
+
+</html>
